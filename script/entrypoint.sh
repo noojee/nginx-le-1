@@ -61,11 +61,16 @@ fi
 mv -v /etc/nginx/conf.d /etc/nginx/conf.d.disabled
 mv -v /etc/nginx/stream.d /etc/nginx/stream.d.disabled
 
+echo "export LE_FQDN=${LE_FQDN}" > /tmp/LE_FQDN.sh
+chmod 755 /tmp/LE_FQDN.sh
+
 (
  sleep 5 #give nginx time to start
  echo "start letsencrypt updater"
  while :; do
     echo "trying to update letsencrypt ..."
+    # read the possibly updated FQDN list from the file system
+    . /tmp/LE_FQDN.sh
     /le.sh
     #on the first run remove default config, conflicting on 80
     rm -f /etc/nginx/conf.d/default.conf 2>/dev/null

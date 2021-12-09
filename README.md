@@ -32,29 +32,41 @@ Simple nginx image (alpine based) with integrated [Let's Encrypt](https://letsen
 - if you don't want a pre-built image, make you own. `docker-compose build` will do it
 - start it `docker-compose up`
 
-### Configuration files variables replacement
+
+## Changing FQDN's without a restart
+
+- You may change the set of FQDN's without restarting and reconfiguring the container by issuing the following command
+  - `docker exec nginx-le /changefqdns.sh aaa.example.com,bbb.example.com,ccc.example.com`
+
+- This will cause retreival of new certs (if required) and a reload of nginx. The changed list of FQDN's will be retained in a temporary file ensuring correct renewal when they expire.
+
+  **WARNING: The new list of FQDN's will be lost when the container is recreated so ensure to update `LE_FQDN` in your configuration.**
+
+
+
+## Configuration files variables replacement
 
 On start of the container all following text matches in custom configuration files you mounted will be replaced,
 variable with dollar sign (`$`, like `$LE_FQDN`) will be taken from environment, please see next table for their list.
 
-| Matching pattern | Value | nginx usage | Description |
-| ---------------- | ----- | ----------- | ----------- |
-| SSL_CERT       | `/etc/nginx/ssl/$SSL_CERT`       | `ssl_certificate` | Public SSL certificate, sent to client |
-| SSL_KEY        | `/etc/nginx/ssl/$SSL_KEY`        | `ssl_certificate_key` | SSL private key, not sent to client |
-| SSL_CHAIN_CERT | `/etc/nginx/ssl/$SSL_CHAIN_CERT` | `ssl_trusted_certificate` | Trusted SSL certificates, not sent to client |
-| LE_FQDN        | `$LE_FQDN` | `server_name` | List of domains, useful for configuration with single `server` block |
+| Matching pattern | Value                            | nginx usage               | Description                                                          |
+| ---------------- | -------------------------------- | ------------------------- | -------------------------------------------------------------------- |
+| SSL_CERT         | `/etc/nginx/ssl/$SSL_CERT`       | `ssl_certificate`         | Public SSL certificate, sent to client                               |
+| SSL_KEY          | `/etc/nginx/ssl/$SSL_KEY`        | `ssl_certificate_key`     | SSL private key, not sent to client                                  |
+| SSL_CHAIN_CERT   | `/etc/nginx/ssl/$SSL_CHAIN_CERT` | `ssl_trusted_certificate` | Trusted SSL certificates, not sent to client                         |
+| LE_FQDN          | `$LE_FQDN`                       | `server_name`             | List of domains, useful for configuration with single `server` block |
 
 ### Environment variables list
 
-| Variable | Default value | Description |
-| -------- | ------------- | ----------- |
-| SSL_CERT       | `le-key.pem` | certbot `privkey.pem` new filename     |
-| SSL_KEY        | `le-crt.pem` | certbot `fullchain.pem` new filename   |
-| SSL_CHAIN_CERT | `le-chain-crt.pem` | certbot `chain.pem` new filename |
-| LETSENCRYPT | `false` | Enables Let's Encrypt certificate retrieval and renewal |
-| LE_FQDN     | | comma-separated list of domains for Let's Encrypt certificate, required if `LETSENCRYPT` is `true` |
-| LE_EMAIL    | | comma-separated list of emails for Let's Encrypt certificate, required if `LETSENCRYPT` is `true` |
-| TZ          | | Timezone, if set will be written to container's `/etc/timezone` |
+| Variable       | Default value      | Description                                                                                        |
+| -------------- | ------------------ | -------------------------------------------------------------------------------------------------- |
+| SSL_CERT       | `le-key.pem`       | certbot `privkey.pem` new filename                                                                 |
+| SSL_KEY        | `le-crt.pem`       | certbot `fullchain.pem` new filename                                                               |
+| SSL_CHAIN_CERT | `le-chain-crt.pem` | certbot `chain.pem` new filename                                                                   |
+| LETSENCRYPT    | `false`            | Enables Let's Encrypt certificate retrieval and renewal                                            |
+| LE_FQDN        |                    | comma-separated list of domains for Let's Encrypt certificate, required if `LETSENCRYPT` is `true` |
+| LE_EMAIL       |                    | comma-separated list of emails for Let's Encrypt certificate, required if `LETSENCRYPT` is `true`  |
+| TZ             |                    | Timezone, if set will be written to container's `/etc/timezone`                                    |
 
 ## Some implementation details
 
@@ -64,7 +76,7 @@ http (:80) port, make sure you [handle](https://github.com/umputun/nginx-le/blob
 path needed for LE challenge.  
 
 - image uses alpine's `certbot` package.
-- `script/entrypoint.sh` requests LE certificate and will refresh every 10 days in case if certificate is close to expiration (30day)
+- `script/entrypoint.sh` requests LE certificate and will refresh every 1 days in case if certificate is close to expiration (30day)
 - `script/le.sh` gets SSL
 - nginx-le on [docker-hub](https://hub.docker.com/r/umputun/nginx-le/)
 - **A+** overall rating on [ssllabs](https://www.ssllabs.com/ssltest/index.html)

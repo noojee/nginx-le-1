@@ -7,7 +7,7 @@ export LE_SSL_CERT=/etc/nginx/ssl/${SSL_CERT}
 export LE_SSL_CHAIN_CERT=/etc/nginx/ssl/${SSL_CHAIN_CERT}
 
 #read existing LE_FQDN
-. /tmp/LE_FQDN.sh
+. /etc/nginx/LE_FQDN.sh
 
 echo "existing LE_FQDN is ${LE_FQDN}"
 
@@ -16,13 +16,13 @@ sed -i "s|${LE_FQDN}|$1|g" /etc/nginx/conf.d/*.conf 2>/dev/null
 sed -i "s|${LE_FQDN}|$1|g" /etc/nginx/stream.d/*.conf 2>/dev/null
 
 # update the FQDN list on file system
-echo "export LE_FQDN=$1" > /tmp/LE_FQDN.sh
-chmod 755 /tmp/LE_FQDN.sh
+echo "export LE_FQDN=$1" > /etc/nginx/LE_FQDN.sh
+chmod 755 /etc/nginx/LE_FQDN.sh
 
 echo "trying to update letsencrypt ..."
 
 # read the possibly updated FQDN list from the file system
-. /tmp/LE_FQDN.sh
+. /etc/nginx/LE_FQDN.sh
 
 echo "Aquiring cert for ${LE_FQDN}"
 /le.sh

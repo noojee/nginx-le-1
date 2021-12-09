@@ -79,7 +79,7 @@ chmod 755 /tmp/LE_FQDN.sh
     mv -v /etc/nginx/stream.d.disabled /etc/nginx/stream.d 2>/dev/null
     echo "reload nginx with ssl"
     nginx -s reload
-    sleep 10d
+    sleep 1d
  done
 ) &
 

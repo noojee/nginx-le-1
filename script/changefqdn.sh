@@ -7,13 +7,11 @@ export LE_SSL_CERT=/etc/nginx/ssl/${SSL_CERT}
 export LE_SSL_CHAIN_CERT=/etc/nginx/ssl/${SSL_CHAIN_CERT}
 
 #read existing LE_FQDN
-. /etc/nginx/LE_FQDN.sh
+if [ -f /etc/nginx/LE_FQDN.sh ]; then
+    . /etc/nginx/LE_FQDN.sh
+fi
 
 echo "existing LE_FQDN is ${LE_FQDN}"
-
-#replace LE_FQDN
-sed -i "s|${LE_FQDN}|$1|g" /etc/nginx/conf.d/*.conf 2>/dev/null
-sed -i "s|${LE_FQDN}|$1|g" /etc/nginx/stream.d/*.conf 2>/dev/null
 
 # update the FQDN list on file system
 echo "export LE_FQDN=$1" > /etc/nginx/LE_FQDN.sh

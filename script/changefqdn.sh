@@ -1,11 +1,5 @@
 #!/bin/sh
 
-#setup ssl keys, export to pass them to le.sh
-echo "ssl_key=${SSL_KEY:=le-key.pem}, ssl_cert=${SSL_CERT:=le-crt.pem}, ssl_chain_cert=${SSL_CHAIN_CERT:=le-chain-crt.pem}"
-export LE_SSL_KEY=/etc/nginx/ssl/${SSL_KEY}
-export LE_SSL_CERT=/etc/nginx/ssl/${SSL_CERT}
-export LE_SSL_CHAIN_CERT=/etc/nginx/ssl/${SSL_CHAIN_CERT}
-
 #read existing LE_FQDN
 if [ -f /etc/nginx/LE_FQDN.sh ]; then
     . /etc/nginx/LE_FQDN.sh
@@ -17,12 +11,78 @@ echo "existing LE_FQDN is ${LE_FQDN}"
 echo "export LE_FQDN=$1" > /etc/nginx/LE_FQDN.sh
 chmod 755 /etc/nginx/LE_FQDN.sh
 
-echo "trying to update letsencrypt ..."
 
+
+
+
+
+
+#setup ssl keys, export to pass them to le.sh
+echo "ssl_key=${SSL_KEY:=le-key.pem}, ssl_cert=${SSL_CERT:=le-crt.pem}, ssl_chain_cert=${SSL_CHAIN_CERT:=le-chain-crt.pem}"
+export LE_SSL_KEY=/etc/nginx/ssl/${SSL_KEY}
+export LE_SSL_CERT=/etc/nginx/ssl/${SSL_CERT}
+export LE_SSL_CHAIN_CERT=/etc/nginx/ssl/${SSL_CHAIN_CERT}
+
+#create configuration source directories, in case they are not mounted
+mkdir -p /etc/nginx/conf.d-le
+mkdir -p /etc/nginx/stream.conf.d-le
+
+#create destination directories
+mkdir -p /etc/nginx/conf.d
+mkdir -p /etc/nginx/stream.d
+mkdir -p /etc/nginx/ssl
+
+#collect services and streams
+SERVICES_FILES=$(find "/etc/nginx/" -type f -maxdepth 1 -name "service*.conf")
+STREAMS_FILES=$(find "/etc/nginx/" -type f -maxdepth 1 -name "stream*.conf")
+
+#copy service*.conf and stream*.conf from /etc/nginx/ if they are mounted
+if [ ${#SERVICES_FILES} -ne 0 ]; then
+    cp -fv /etc/nginx/service*.conf /etc/nginx/conf.d/
+fi
+if [ ${#STREAMS_FILES} -ne 0 ]; then
+    cp -fv /etc/nginx/stream*.conf /etc/nginx/stream.d/
+fi
+
+cp -fv /etc/nginx/conf.d-le/*.conf /etc/nginx/conf.d/
+cp -fv /etc/nginx/stream.conf.d-le/*.conf /etc/nginx/stream.conf.d/
+
+#replace SSL_KEY, SSL_CERT and SSL_CHAIN_CERT by actual keys
+sed -i "s|SSL_KEY|${LE_SSL_KEY}|g" /etc/nginx/conf.d/*.conf 2>/dev/null
+sed -i "s|SSL_KEY|${LE_SSL_KEY}|g" /etc/nginx/stream.d/*.conf 2>/dev/null
+sed -i "s|SSL_CERT|${LE_SSL_CERT}|g" /etc/nginx/conf.d/*.conf 2>/dev/null
+sed -i "s|SSL_CERT|${LE_SSL_CERT}|g" /etc/nginx/stream.d/*.conf 2>/dev/null
+sed -i "s|SSL_CHAIN_CERT|${LE_SSL_CHAIN_CERT}|g" /etc/nginx/conf.d/*.conf 2>/dev/null
+sed -i "s|SSL_CHAIN_CERT|${LE_SSL_CHAIN_CERT}|g" /etc/nginx/stream.d/*.conf 2>/dev/null
+
+#read existing LE_FQDN incase of an unexpected container restart
+if [ -f /etc/nginx/LE_FQDN.sh ]; then
+    . /etc/nginx/LE_FQDN.sh
+fi
+
+#replace LE_FQDN
+sed -i "s|LE_FQDN|${LE_FQDN}|g" /etc/nginx/conf.d/*.conf 2>/dev/null
+sed -i "s|LE_FQDN|${LE_FQDN}|g" /etc/nginx/stream.d/*.conf 2>/dev/null
+
+#generate dhparams.pem
+if [ ! -f /etc/nginx/ssl/dhparams.pem ]; then
+    echo "make dhparams"
+    cd /etc/nginx/ssl
+    openssl dhparam -out dhparams.pem 2048
+    chmod 600 dhparams.pem
+fi
+
+#disable configuration and let it run without SSL
+mv -v /etc/nginx/conf.d /etc/nginx/conf.d.disabled
+mv -v /etc/nginx/stream.d /etc/nginx/stream.d.disabled
+
+echo "export LE_FQDN=${LE_FQDN}" > /etc/nginx/LE_FQDN.sh
+chmod 755 /etc/nginx/LE_FQDN.sh
+
+echo "start letsencrypt updater"
+echo "trying to update letsencrypt ..."
 # read the possibly updated FQDN list from the file system
 . /etc/nginx/LE_FQDN.sh
-
-echo "Aquiring cert for ${LE_FQDN}"
 /le.sh
 #on the first run remove default config, conflicting on 80
 rm -f /etc/nginx/conf.d/default.conf 2>/dev/null

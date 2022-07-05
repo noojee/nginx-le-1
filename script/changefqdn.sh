@@ -68,7 +68,11 @@ sed -i "s|LE_FQDN|${LE_FQDN}|g" /etc/nginx/stream.d/*.conf 2>/dev/null
 if [ ! -f /etc/nginx/ssl/dhparams.pem ]; then
     echo "make dhparams"
     cd /etc/nginx/ssl
-    openssl dhparam -out dhparams.pem 2048
+    # write to a temp file, as a container restart would otherwise
+    # lead to an invalid or empty dhparams.pem
+    rm -f dhparams.pem.tmp
+    openssl dhparam -out dhparams.pem.tmp 2048
+    mv dhparams.pem.tmp dhparams.pem
     chmod 600 dhparams.pem
 fi
 
